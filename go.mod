@@ -1,4 +1,4 @@
-module TarsConfigObserver
+module github.com/tars-go/TarsConfigObserver
 
 require github.com/spf13/viper v1.4.0
 
