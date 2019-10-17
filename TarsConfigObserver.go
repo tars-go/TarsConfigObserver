@@ -19,7 +19,7 @@ type oneRemoteConfig struct {
 	configType  string
 	configCRC32 uint32
 
-	viper_inst *viper.Viper
+	viperInst *viper.Viper
 }
 
 // ConfigObserver Taf远程配置监听服务
@@ -34,9 +34,13 @@ type ConfigObserver struct {
 // NewObserver 根据服务配置，初始化一个observer (每个App/Server只需要调用1次)
 //  reload_interval - 检查远程配置变更的时间，建议值：60 (60秒)。可通过ReloadInterval动态调整
 //  path - 传空字符串""则默认写入到`conf/`
-func NewObserver(reload_interval int, path string) *ConfigObserver {
+func NewObserver(reloadInterval int, path string) *ConfigObserver {
 	cob := new(ConfigObserver)
 	cfg := tars.GetServerConfig()
+	if cfg == nil {
+		fmt.Println("tars not init")
+		return nil
+	}
 	if path == "" {
 		path = cfg.BasePath + "../conf"
 	}
@@ -46,7 +50,7 @@ func NewObserver(reload_interval int, path string) *ConfigObserver {
 	cob.configs = make(map[string]*oneRemoteConfig)
 
 	// auto reload
-	cob.ReloadInterval = reload_interval
+	cob.ReloadInterval = reloadInterval
 	if cob.ReloadInterval < 1 || cob.ReloadInterval > 3600 {
 		cob.ReloadInterval = 60
 	}
@@ -75,7 +79,7 @@ func (cob *ConfigObserver) AddRemoteConfig(filename string) (vpconf *viper.Viper
 		configName:  configName,
 		configType:  configExt[1:],
 		configCRC32: 0,
-		viper_inst:  vpconf,
+		viperInst:   vpconf,
 	}
 	vpconf.SetConfigName(configName)
 	vpconf.SetConfigType(configExt[1:])
@@ -99,10 +103,10 @@ func (cob *ConfigObserver) GetViper(filename string) *viper.Viper {
 	if conf == nil {
 		return nil
 	}
-	return conf.viper_inst
+	return conf.viperInst
 }
 
-// GetCrc32 返回目标文件的CRC32
+// GetCRC32 返回目标文件的CRC32
 func (cob *ConfigObserver) GetCRC32(filename string) uint32 {
 	conf := cob.getConfig(filename)
 	if conf == nil {
@@ -129,7 +133,7 @@ func (cob *ConfigObserver) reloadConfig(config *oneRemoteConfig) (bool, error) {
 		// logger.Infof("real reload config: %s", confBuf)
 		config.configCRC32 = newCRC32
 		// 重载viper的配置数据
-		return true, config.viper_inst.ReadConfig(bytes.NewBuffer([]byte(confBuf)))
+		return true, config.viperInst.ReadConfig(bytes.NewBuffer([]byte(confBuf)))
 	}
 	return false, nil
 }
